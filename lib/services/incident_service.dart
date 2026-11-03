@@ -1,12 +1,15 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/incident.dart';
 import '../models/user_model.dart';
+import 'image_storage_service.dart';
 
 class IncidentService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final ImageStorageService _imageStorage;
+
+  // The photo storage is "injected", so it can be Firebase or Supabase
+  IncidentService(this._imageStorage);
 
   CollectionReference<Map<String, dynamic>> get _incidents =>
       _db.collection('incidents');
@@ -34,9 +37,7 @@ class IncidentService {
 
     String? imageUrl;
     if (image != null) {
-      final ref = _storage.ref('incident_images/${doc.id}.jpg');
-      await ref.putFile(image, SettableMetadata(contentType: 'image/jpeg'));
-      imageUrl = await ref.getDownloadURL();
+      imageUrl = await _imageStorage.uploadIncidentImage(incidentId: doc.id, image: image);
     }
 
     await doc.set({
@@ -63,7 +64,7 @@ class IncidentService {
     });
   }
 
-  // UPDATE (staff only, enforced later by security rules)
+  // UPDATE (staff only, enforced by Firestore security rules)
   Future<void> updateStatus({
     required String incidentId,
     required String status,
@@ -88,13 +89,13 @@ class IncidentService {
     });
   }
 
-  // DELETE (also removes the photo from Storage)
+  // DELETE (also tries to remove the photo)
   Future<void> deleteIncident(Incident incident) async {
     if (incident.imageUrl != null) {
       try {
-        await _storage.refFromURL(incident.imageUrl!).delete();
+        await _imageStorage.deleteIncidentImage(incident.imageUrl!);
       } catch (_) {
-        // If the photo is already gone, still delete the report
+        // If the photo can't be removed, still delete the report
       }
     }
     await _incidents.doc(incident.id).delete();

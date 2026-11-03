@@ -161,9 +161,10 @@ class IncidentProvider extends ChangeNotifier {
           ? 'You do not have permission to do that.'
           : 'Something went wrong (${e.code}). Please try again.';
       return false;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Incident action failed: $e');
       _error = 'Something went wrong. Please try again.';
-      return false;
+      return false;;
     } finally {
       _isSubmitting = false;
       notifyListeners();

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
+import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/incident_provider.dart';
 import 'services/auth_service.dart';
 import 'services/incident_service.dart';
+import 'services/supabase_image_storage.dart';
 import 'screens/auth_wrapper.dart';
 import 'utils/constants.dart';
 
@@ -14,11 +17,18 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await Supabase.initialize(
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.anonKey,
+  );
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
-        ChangeNotifierProvider(create: (_) => IncidentProvider(IncidentService())),
+        ChangeNotifierProvider(
+          create: (_) => IncidentProvider(IncidentService(SupabaseImageStorage())),
+        ),
       ],
       child: const CampusIncidentApp(),
     ),
