@@ -28,9 +28,16 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _onAuthChanged(User? user) async {
     _firebaseUser = user;
-    _profile = user != null ? await _authService.getUserProfile(user.uid) : null;
-    _isInitializing = false;
-    notifyListeners();
+    try {
+      _profile = user != null ? await _authService.getUserProfile(user.uid) : null;
+    } catch (e) {
+      debugPrint('Could not load profile: $e');
+      _profile = null;
+    } finally {
+      // Always stop the loading screen, even if loading the profile failed
+      _isInitializing = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _refreshProfile() async {
