@@ -52,6 +52,34 @@ class IncidentProvider extends ChangeNotifier {
   int countByStatus(String status) =>
       _incidents.where((i) => i.status == status).length;
 
+    // ---------- Staff dashboard ----------
+  static const Map<String, int> _priorityRank = {'High': 0, 'Medium': 1, 'Low': 2};
+
+  // High priority first, then the oldest first, so nothing urgent waits too long
+  int _byPriorityThenOldest(Incident a, Incident b) {
+    final byPriority = (_priorityRank[a.priority] ?? 1)
+        .compareTo(_priorityRank[b.priority] ?? 1);
+    if (byPriority != 0) return byPriority;
+    return a.createdAt.compareTo(b.createdAt);
+  }
+
+  List<Incident> get needsAttention => _incidents
+      .where((i) => i.status == IncidentStatus.submitted)
+      .toList()
+    ..sort(_byPriorityThenOldest);
+
+  List<Incident> get inProgressIncidents => _incidents
+      .where((i) => i.status == IncidentStatus.inProgress)
+      .toList()
+    ..sort(_byPriorityThenOldest);
+
+  int get highPriorityOpenCount => _incidents
+      .where((i) =>
+          i.priority == 'High' &&
+          (i.status == IncidentStatus.submitted ||
+              i.status == IncidentStatus.inProgress))
+      .length;
+
   // Used by the details screen, so it always shows the latest version
   Incident? findById(String id) {
     for (final incident in _incidents) {

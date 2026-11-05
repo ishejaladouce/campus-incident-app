@@ -7,6 +7,7 @@ import 'incidents/incident_list_screen.dart';
 import 'incidents/my_reports_screen.dart';
 import 'incidents/report_incident_screen.dart';
 import 'profile_screen.dart';
+import 'staff/staff_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,8 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   late final IncidentProvider _incidentProvider;
 
-  static const _titles = [AppConstants.appName, 'My reports', 'Profile'];
-
   @override
   void initState() {
     super.initState();
@@ -31,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    // Stop listening when the user logs out
     _incidentProvider.stopListening();
     super.dispose();
   }
@@ -39,10 +37,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isStaff = context.watch<AuthProvider>().isStaff;
+    final titles = [
+      AppConstants.appName,
+      isStaff ? 'Staff dashboard' : 'My reports',
+      'Profile',
+    ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
+        title: Text(titles[_currentIndex]),
         actions: [
           if (isStaff)
             const Padding(
@@ -54,13 +57,14 @@ class _HomeScreenState extends State<HomeScreen> {
       // IndexedStack keeps each tab's scroll position when switching
       body: IndexedStack(
         index: _currentIndex,
-        children: const [
-          IncidentListScreen(),
-          MyReportsScreen(),
-          ProfileScreen(),
+        children: [
+          const IncidentListScreen(),
+          // Staff get a dashboard; students get their own reports
+          isStaff ? const StaffDashboardScreen() : const MyReportsScreen(),
+          const ProfileScreen(),
         ],
       ),
-      floatingActionButton: _currentIndex < 2
+      floatingActionButton: _currentIndex == 0 || (!isStaff && _currentIndex == 1)
           ? FloatingActionButton.extended(
               onPressed: () => Navigator.push(
                 context,
@@ -73,18 +77,24 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),
             selectedIcon: Icon(Icons.list_alt),
             label: 'All reports',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.assignment_ind_outlined),
-            selectedIcon: Icon(Icons.assignment_ind),
-            label: 'My reports',
-          ),
-          NavigationDestination(
+          isStaff
+              ? const NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: 'Dashboard',
+                )
+              : const NavigationDestination(
+                  icon: Icon(Icons.assignment_ind_outlined),
+                  selectedIcon: Icon(Icons.assignment_ind),
+                  label: 'My reports',
+                ),
+          const NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
             label: 'Profile',
