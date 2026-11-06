@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    // Stop listening when the user logs out
     _incidentProvider.stopListening();
     super.dispose();
   }

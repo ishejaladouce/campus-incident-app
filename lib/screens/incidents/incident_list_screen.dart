@@ -37,6 +37,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
           child: TextField(
             controller: _searchController,
             onChanged: provider.setSearchQuery,
+            textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               hintText: 'Search title, description or location',
               prefixIcon: const Icon(Icons.search),
@@ -46,6 +47,7 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
                   ? null
                   : IconButton(
                       icon: const Icon(Icons.clear),
+                      tooltip: 'Clear search',
                       onPressed: () {
                         _searchController.clear();
                         provider.setSearchQuery('');
@@ -78,12 +80,27 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Loading failed: explain why and offer to try again
+    if (provider.loadError != null && incidents.isEmpty) {
+      return EmptyState(
+        icon: Icons.cloud_off,
+        title: 'Could not load reports',
+        message: provider.loadError!,
+        actionLabel: 'Try again',
+        onAction: provider.retry,
+      );
+    }
     if (incidents.isEmpty) {
       return provider.hasActiveFilters
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.search_off,
               title: 'No matching reports',
               message: 'Try a different search or filter.',
+              actionLabel: 'Clear filters',
+              onAction: () {
+                _searchController.clear();
+                provider.clearFilters();
+              },
             )
           : const EmptyState(
               icon: Icons.inbox_outlined,

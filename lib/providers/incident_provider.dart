@@ -1,20 +1,24 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import '../models/incident.dart';
 import '../models/user_model.dart';
 import '../services/incident_service.dart';
+import '../utils/error_messages.dart';
 
 class IncidentProvider extends ChangeNotifier {
   final IncidentService _service;
   IncidentProvider(this._service);
 
+  // Photo uploads can be slow on campus Wi-Fi, so allow a bit more time
+  static const _timeout = Duration(seconds: 45);
+
   StreamSubscription<List<Incident>>? _subscription;
   List<Incident> _incidents = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
-  String? _error;
+  String? _error; // errors from actions (submit, update, delete)
+  String? _loadError; // errors while loading the list
 
   // Search and filters
   String _searchQuery = '';
@@ -24,11 +28,14 @@ class IncidentProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isSubmitting => _isSubmitting;
   String? get error => _error;
+  String? get loadError => _loadError;
   String get searchQuery => _searchQuery;
   String? get categoryFilter => _categoryFilter;
   String? get statusFilter => _statusFilter;
   bool get hasActiveFilters =>
       _searchQuery.isNotEmpty || _categoryFilter != null || _statusFilter != null;
+
+  // ---------- Lists for the screens ----------
 
   // The list the screens show, after search + filters
   List<Incident> get filteredIncidents {
@@ -52,7 +59,16 @@ class IncidentProvider extends ChangeNotifier {
   int countByStatus(String status) =>
       _incidents.where((i) => i.status == status).length;
 
-    // ---------- Staff dashboard ----------
+  // Used by the details screen, so it always shows the latest version
+  Incident? findById(String id) {
+    for (final incident in _incidents) {
+      if (incident.id == id) return incident;
+    }
+    return null;
+  }
+
+  // ---------- Staff dashboard ----------
+
   static const Map<String, int> _priorityRank = {'High': 0, 'Medium': 1, 'Low': 2};
 
   // High priority first, then the oldest first, so nothing urgent waits too long
@@ -80,13 +96,7 @@ class IncidentProvider extends ChangeNotifier {
               i.status == IncidentStatus.inProgress))
       .length;
 
-  // Used by the details screen, so it always shows the latest version
-  Incident? findById(String id) {
-    for (final incident in _incidents) {
-      if (incident.id == id) return incident;
-    }
-    return null;
-  }
+  // ---------- Real-time listening ----------
 
   // Start listening after login
   void startListening() {
@@ -95,15 +105,26 @@ class IncidentProvider extends ChangeNotifier {
       (incidents) {
         _incidents = incidents;
         _isLoading = false;
-        _error = null;
+        _loadError = null;
         notifyListeners();
       },
-      onError: (_) {
+      onError: (Object e) {
+        debugPrint('Could not load reports: $e');
         _isLoading = false;
-        _error = 'Could not load reports. Check your connection.';
+        _loadError = ErrorMessages.from(e);
         notifyListeners();
       },
     );
+  }
+
+  // Try loading again after an error
+  void retry() {
+    _subscription?.cancel();
+    _subscription = null;
+    _isLoading = true;
+    _loadError = null;
+    notifyListeners();
+    startListening();
   }
 
   // Stop listening on logout
@@ -112,10 +133,13 @@ class IncidentProvider extends ChangeNotifier {
     _subscription = null;
     _incidents = [];
     _isLoading = true;
+    _loadError = null;
     _searchQuery = '';
     _categoryFilter = null;
     _statusFilter = null;
   }
+
+  // ---------- Search and filters ----------
 
   void setSearchQuery(String value) {
     _searchQuery = value.trim();
@@ -138,6 +162,8 @@ class IncidentProvider extends ChangeNotifier {
     _statusFilter = null;
     notifyListeners();
   }
+
+  // ---------- Actions ----------
 
   Future<bool> submitIncident({
     required String title,
@@ -177,22 +203,18 @@ class IncidentProvider extends ChangeNotifier {
     return _run(() => _service.deleteIncident(incident));
   }
 
+  // Runs an action with loading, a timeout and friendly error messages
   Future<bool> _run(Future<void> Function() action) async {
     _isSubmitting = true;
     _error = null;
     notifyListeners();
     try {
-      await action();
+      await action().timeout(_timeout);
       return true;
-    } on FirebaseException catch (e) {
-      _error = e.code == 'permission-denied'
-          ? 'You do not have permission to do that.'
-          : 'Something went wrong (${e.code}). Please try again.';
-      return false;
     } catch (e) {
       debugPrint('Incident action failed: $e');
-      _error = 'Something went wrong. Please try again.';
-      return false;;
+      _error = ErrorMessages.from(e);
+      return false;
     } finally {
       _isSubmitting = false;
       notifyListeners();

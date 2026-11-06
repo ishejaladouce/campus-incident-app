@@ -34,7 +34,11 @@ class IncidentDetailScreen extends StatelessWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Delete report?'),
-        content: const Text('This cannot be undone.'),
+        content: const Text(
+          'This permanently removes the report and its photo. '
+          'Use this for spam, duplicates or inappropriate content. '
+          'To close a valid report, update its status instead.',
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Delete')),

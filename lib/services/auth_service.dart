@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import '../utils/app_exception.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -24,35 +25,46 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    if (!isAluEmail(email)) {
-      throw Exception('Please use your ALU email address.');
+    final cleanEmail = email.trim().toLowerCase();
+    if (!isAluEmail(cleanEmail)) {
+      throw const AppException('Please use your ALU email address.');
     }
 
     final cred = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
+      email: cleanEmail,
       password: password,
     );
     final user = cred.user!;
 
-    // Save the user's profile in Firestore (everyone starts as a student)
-    final appUser = AppUser(
-      uid: user.uid,
-      name: name.trim(),
-      email: email.trim(),
-      role: 'student',
-    );
-    await _db.collection('users').doc(user.uid).set({
-      ...appUser.toMap(),
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    // Save the profile (everyone starts as a student)
+    try {
+      final appUser = AppUser(
+        uid: user.uid,
+        name: name.trim(),
+        email: cleanEmail,
+        role: 'student',
+      );
+      await _db.collection('users').doc(user.uid).set({
+        ...appUser.toMap(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Roll back: never leave a login without a profile
+      try {
+        await user.delete();
+      } catch (_) {}
+      throw const AppException('Could not create your profile. Please try again.');
+    }
 
-    // Send the verification email
-    await user.sendEmailVerification();
+    // If sending fails, the user can tap "Resend email" on the next screen
+    try {
+      await user.sendEmailVerification();
+    } catch (_) {}
   }
 
   Future<void> login({required String email, required String password}) async {
     await _auth.signInWithEmailAndPassword(
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password: password,
     );
   }

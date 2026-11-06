@@ -18,6 +18,16 @@ class MyReportsScreen extends StatelessWidget {
     if (provider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+    // Loading failed: explain why and offer to try again
+    if (provider.loadError != null && myReports.isEmpty) {
+      return EmptyState(
+        icon: Icons.cloud_off,
+        title: 'Could not load your reports',
+        message: provider.loadError!,
+        actionLabel: 'Try again',
+        onAction: provider.retry,
+      );
+    }
     if (myReports.isEmpty) {
       return const EmptyState(
         icon: Icons.assignment_outlined,
