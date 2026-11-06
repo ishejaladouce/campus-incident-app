@@ -11,10 +11,12 @@ class AuthService {
 
   User? get currentUser => _auth.currentUser;
 
-  // Only allow ALU emails
+  // Only allow ALU emails: something before the @, then exactly an ALU domain
+  static final RegExp _aluEmailRegex =
+      RegExp(r'^[a-z0-9._%+-]+@(alustudent|alueducation)\.com$');
+
   static bool isAluEmail(String email) {
-    final e = email.trim().toLowerCase();
-    return e.endsWith('@alustudent.com') || e.endsWith('@alueducation.com');
+    return _aluEmailRegex.hasMatch(email.trim().toLowerCase());
   }
 
   Future<void> register({

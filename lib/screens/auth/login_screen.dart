@@ -27,13 +27,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus(); // close the keyboard
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
-    final success = await auth.login(
-      _emailController.text,
-      _passwordController.text,
-    );
+    final success = await auth.login(_emailController.text, _passwordController.text);
 
     if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -85,15 +83,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     icon: Icons.lock_outline,
                     isPassword: true,
                     validator: Validators.password,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 24),
                   PrimaryButton(label: 'Log in', onPressed: _submit, isLoading: isLoading),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    ),
+                    onPressed: isLoading
+                        ? null
+                        : () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            ),
                     child: const Text("Don't have an account? Register"),
                   ),
                 ],

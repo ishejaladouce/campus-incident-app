@@ -29,7 +29,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fix the highlighted fields.')),
+      );
+      return;
+    }
 
     final auth = context.read<AuthProvider>();
     final success = await auth.register(
@@ -40,7 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (!mounted) return;
     if (success) {
-      // Go back to the first screen; AuthWrapper will show the verify screen
+      // Back to the first screen; AuthWrapper shows the verify screen
       Navigator.popUntil(context, (route) => route.isFirst);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,9 +73,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _nameController,
                   label: 'Full name',
                   icon: Icons.person_outline,
+                  keyboardType: TextInputType.name,
+                  maxLength: 50,
                   validator: Validators.name,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 AppTextField(
                   controller: _emailController,
                   label: 'ALU email',
@@ -80,10 +88,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 AppTextField(
                   controller: _passwordController,
-                  label: 'Password',
+                  label: 'Password (8+ characters, letters and numbers)',
                   icon: Icons.lock_outline,
                   isPassword: true,
-                  validator: Validators.password,
+                  validator: Validators.newPassword,
                 ),
                 const SizedBox(height: 16),
                 AppTextField(
@@ -91,9 +99,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: 'Confirm password',
                   icon: Icons.lock_outline,
                   isPassword: true,
-                  validator: (value) => value != _passwordController.text
-                      ? 'Passwords do not match'
-                      : null,
+                  validator: (value) =>
+                      Validators.confirmPassword(value, _passwordController.text),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 24),
                 PrimaryButton(label: 'Create account', onPressed: _submit, isLoading: isLoading),

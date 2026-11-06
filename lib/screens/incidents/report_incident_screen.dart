@@ -38,7 +38,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      // Resize and compress so uploads are fast and cheap
+      // Resize and compress so uploads are fast and light
       final picked = await _picker.pickImage(source: source, maxWidth: 1280, imageQuality: 70);
       if (picked != null) setState(() => _image = File(picked.path));
     } catch (_) {
@@ -89,9 +89,21 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fix the highlighted fields.')),
+      );
+      return;
+    }
+
     final reporter = context.read<AuthProvider>().profile;
-    if (reporter == null) return;
+    if (reporter == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not load your profile. Please log out and log in again.')),
+      );
+      return;
+    }
 
     final provider = context.read<IncidentProvider>();
     final success = await provider.submitIncident(
@@ -135,6 +147,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: _category,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   decoration: InputDecoration(
                     labelText: 'Category',
                     prefixIcon: const Icon(Icons.category_outlined),
@@ -152,7 +165,7 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                       ),
                     );
                   }).toList(),
-                  onChanged: (value) => setState(() => _category = value),
+                  onChanged: isSubmitting ? null : (value) => setState(() => _category = value),
                   validator: (value) => value == null ? 'Please choose a category' : null,
                 ),
                 const SizedBox(height: 16),
@@ -160,26 +173,30 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                   controller: _titleController,
                   label: 'Short title',
                   icon: Icons.title,
-                  validator: (value) => Validators.required(value, 'Title'),
+                  maxLength: 100,
+                  validator: (value) =>
+                      Validators.textLength(value, fieldName: 'Title', min: 3, max: 100),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 AppTextField(
                   controller: _locationController,
                   label: 'Location (e.g. Block B, 2nd floor)',
                   icon: Icons.place_outlined,
-                  validator: (value) => Validators.required(value, 'Location'),
+                  maxLength: 100,
+                  validator: (value) =>
+                      Validators.textLength(value, fieldName: 'Location', min: 2, max: 100),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 AppTextField(
                   controller: _descriptionController,
                   label: 'Describe the problem',
                   icon: Icons.description_outlined,
                   maxLines: 4,
-                  validator: (value) => value == null || value.trim().length < 10
-                      ? 'Please give a bit more detail (at least 10 characters)'
-                      : null,
+                  maxLength: 1000,
+                  validator: (value) =>
+                      Validators.textLength(value, fieldName: 'Description', min: 10, max: 1000),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Text('Priority', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
@@ -187,15 +204,16 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                       .map((p) => ButtonSegment(value: p, label: Text(p)))
                       .toList(),
                   selected: {_priority},
-                  onSelectionChanged: (selection) =>
-                      setState(() => _priority = selection.first),
+                  onSelectionChanged: isSubmitting
+                      ? null
+                      : (selection) => setState(() => _priority = selection.first),
                 ),
                 const SizedBox(height: 16),
                 Text('Photo (optional)', style: theme.textTheme.titleSmall),
                 const SizedBox(height: 8),
                 if (_image == null)
                   OutlinedButton.icon(
-                    onPressed: _showImageOptions,
+                    onPressed: isSubmitting ? null : _showImageOptions,
                     icon: const Icon(Icons.add_a_photo_outlined),
                     label: const Text('Add a photo'),
                   )
@@ -211,7 +229,8 @@ class _ReportIncidentScreenState extends State<ReportIncidentScreen> {
                         right: 8,
                         child: IconButton.filledTonal(
                           icon: const Icon(Icons.edit),
-                          onPressed: _showImageOptions,
+                          tooltip: 'Change photo',
+                          onPressed: isSubmitting ? null : _showImageOptions,
                         ),
                       ),
                     ],
