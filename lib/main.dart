@@ -6,8 +6,10 @@ import 'config/supabase_config.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/incident_provider.dart';
+import 'providers/notification_provider.dart';
 import 'services/auth_service.dart';
 import 'services/incident_service.dart';
+import 'services/notification_service.dart';
 import 'services/supabase_image_storage.dart';
 import 'screens/auth_wrapper.dart';
 import 'utils/constants.dart';
@@ -27,8 +29,11 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthService())),
         ChangeNotifierProvider(
+          // To use Firebase Storage instead, replace SupabaseImageStorage()
+          // with FirebaseImageStorage() (and import firebase_image_storage.dart)
           create: (_) => IncidentProvider(IncidentService(SupabaseImageStorage())),
         ),
+        ChangeNotifierProvider(create: (_) => NotificationProvider(NotificationService())),
       ],
       child: const CampusIncidentApp(),
     ),

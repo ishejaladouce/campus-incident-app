@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/incident_provider.dart';
+import '../providers/notification_provider.dart';
 import '../utils/constants.dart';
 import 'incidents/incident_list_screen.dart';
 import 'incidents/my_reports_screen.dart';
 import 'incidents/report_incident_screen.dart';
+import 'notifications_screen.dart';
 import 'profile_screen.dart';
 import 'staff/staff_dashboard_screen.dart';
 
@@ -19,19 +21,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   late final IncidentProvider _incidentProvider;
+  late final NotificationProvider _notificationProvider;
 
   @override
   void initState() {
     super.initState();
-    // Start the real-time Firestore listener once the user is logged in
+    // Start the real-time listeners once the user is logged in
     _incidentProvider = context.read<IncidentProvider>();
     _incidentProvider.startListening();
+
+    _notificationProvider = context.read<NotificationProvider>();
+    final uid = context.read<AuthProvider>().profile?.uid;
+    if (uid != null) _notificationProvider.startListening(uid);
   }
 
   @override
   void dispose() {
     // Stop listening when the user logs out
     _incidentProvider.stopListening();
+    _notificationProvider.stopListening();
     super.dispose();
   }
 
@@ -52,7 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const Padding(
               padding: EdgeInsets.only(right: 12),
               child: Chip(label: Text('Staff'), visualDensity: VisualDensity.compact),
-            ),
+            )
+          else
+            const _NotificationBell(),
         ],
       ),
       // IndexedStack keeps each tab's scroll position when switching
@@ -101,6 +111,29 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Profile',
           ),
         ],
+      ),
+    );
+  }
+}
+
+// The bell with a badge showing how many notifications are unread
+class _NotificationBell extends StatelessWidget {
+  const _NotificationBell();
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = context.watch<NotificationProvider>().unreadCount;
+
+    return IconButton(
+      tooltip: 'Notifications',
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+      ),
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text('$unread'),
+        child: Icon(unread > 0 ? Icons.notifications : Icons.notifications_none),
       ),
     );
   }

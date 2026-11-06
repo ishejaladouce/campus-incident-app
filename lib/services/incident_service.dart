@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import '../models/app_notification.dart';
 import '../models/incident.dart';
 import '../models/user_model.dart';
+import '../utils/app_exception.dart';
 import 'image_storage_service.dart';
 
 class IncidentService {
@@ -13,6 +16,9 @@ class IncidentService {
 
   CollectionReference<Map<String, dynamic>> get _incidents =>
       _db.collection('incidents');
+
+  CollectionReference<Map<String, dynamic>> get _notifications =>
+      _db.collection('notifications');
 
   // Real-time stream: the app updates automatically when anything changes
   Stream<List<Incident>> watchIncidents() {
@@ -64,17 +70,24 @@ class IncidentService {
     });
   }
 
-  // UPDATE (staff only, enforced by Firestore security rules)
+  // UPDATE (staff only) + notify the student, saved together in one batch
   Future<void> updateStatus({
     required String incidentId,
     required String status,
     String? note,
     required AppUser staff,
-  }) {
-    final cleanNote =
-        (note == null || note.trim().isEmpty) ? null : note.trim();
+  }) async {
+    final cleanNote = (note == null || note.trim().isEmpty) ? null : note.trim();
 
-    return _incidents.doc(incidentId).update({
+    final ref = _incidents.doc(incidentId);
+    final snapshot = await ref.get();
+    if (!snapshot.exists) {
+      throw const AppException('This report no longer exists.');
+    }
+    final incident = Incident.fromDoc(snapshot);
+
+    final batch = _db.batch();
+    batch.update(ref, {
       'status': status,
       'staffNote': cleanNote,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -87,9 +100,26 @@ class IncidentService {
         ).toMap(),
       ]),
     });
+    batch.set(_notifications.doc(), {
+      'userId': incident.reportedBy,
+      'incidentId': incident.id,
+      'incidentTitle': incident.title,
+      'type': NotificationType.statusChanged,
+      'status': status,
+      'message': _statusMessage(incident.title, status, cleanNote),
+      'createdAt': FieldValue.serverTimestamp(),
+      'read': false,
+    });
+    // Both writes succeed together, or neither does
+    await batch.commit();
   }
 
-  // DELETE (also tries to remove the photo)
+  static String _statusMessage(String title, String status, String? note) {
+    final base = 'Your report "$title" is now ${IncidentStatus.label(status).toLowerCase()}.';
+    return note == null ? base : '$base Staff note: $note';
+  }
+
+  // DELETE (also tries to remove the photo, and notifies the reporter)
   Future<void> deleteIncident(Incident incident) async {
     if (incident.imageUrl != null) {
       try {
@@ -98,6 +128,25 @@ class IncidentService {
         // If the photo can't be removed, still delete the report
       }
     }
-    await _incidents.doc(incident.id).delete();
+
+    final batch = _db.batch();
+    batch.delete(_incidents.doc(incident.id));
+
+    // Notify the student only when someone else (staff) removed their report
+    final deletedBy = FirebaseAuth.instance.currentUser?.uid;
+    if (deletedBy != incident.reportedBy) {
+      batch.set(_notifications.doc(), {
+        'userId': incident.reportedBy,
+        'incidentId': incident.id,
+        'incidentTitle': incident.title,
+        'type': NotificationType.deleted,
+        'status': null,
+        'message': 'Your report "${incident.title}" was removed by campus staff. '
+            'This usually happens with duplicates, spam or inappropriate content.',
+        'createdAt': FieldValue.serverTimestamp(),
+        'read': false,
+      });
+    }
+    await batch.commit();
   }
 }
