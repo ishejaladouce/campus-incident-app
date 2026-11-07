@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Needed so the release app can reach Firebase and Supabase -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="campus_incident_app"
+        android:label="CampusIncident"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
