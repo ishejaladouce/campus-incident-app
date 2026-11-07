@@ -37,17 +37,17 @@ Campus issues are often reported by word of mouth or in group chats, so reports 
 
 | Login | All reports | Filters |
 | :---: | :---: | :---: |
-| <img src="screenshots/1-login.jpg" width="220" alt="Login screen"> | <img src="screenshots/2-all-reports.jpg" width="220" alt="All reports with search and filters"> | <img src="screenshots/3-filters.jpg" width="220" alt="Category filter open"> |
+| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.41.23.jpeg" width="220" alt="Login screen"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.41.36.jpeg" width="220" alt="All reports with search and filters"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.41.24%20(2).jpeg" width="220" alt="Category filter open"> |
 
-| Report form | Report details | Notifications |
-| :---: | :---: | :---: |
-| <img src="screenshots/4-report-form.jpg" width="220" alt="Report form"> | <img src="screenshots/5-report-details.jpg" width="220" alt="Report details with staff note and timeline"> | <img src="screenshots/9-notifications.jpg" width="220" alt="Notifications screen"> |
+| Report details | Notifications |
+| :---: | :---: |
+| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.37%20(2).jpeg" width="220" alt="Report details with staff note and timeline"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2014.02.50%20(1).jpeg" width="220" alt="Notifications screen"> |
 
 **Staff**
 
 | Dashboard | Update status | Student gets notified |
 | :---: | :---: | :---: |
-| <img src="screenshots/7-staff-dashboard.jpg" width="220" alt="Staff dashboard with high-priority alert"> | <img src="screenshots/6-update-status.jpg" width="220" alt="Status update sheet"> | <img src="screenshots/8-notification-badge.jpg" width="220" alt="Notification bell with unread badge"> |
+| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.38%20(3).jpeg" width="220" alt="Staff dashboard with high-priority alert"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.37%20(3).jpeg" width="220" alt="Status update sheet"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2014.02.50%20(2).jpeg" width="220" alt="Notification bell with unread badge"> |
 
 ## Tech stack
 
