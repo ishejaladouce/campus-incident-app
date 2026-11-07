@@ -47,7 +47,11 @@ Campus issues are often reported by word of mouth or in group chats, so reports 
 
 | Dashboard | Update status | Student gets notified |
 | :---: | :---: | :---: |
-| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.38%20(3).jpeg" width="220" alt="Staff dashboard with high-priority alert"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.37%20(3).jpeg" width="220" alt="Status update sheet"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2014.02.50%20(2).jpeg" width="220" alt="Notification bell with unread badge"> |
+| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.38%20(3).jpeg" width="220" alt="Staff dashboard with high-priority alert"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.38.jpeg" width="220" alt="Status update sheet"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2014.02.50%20(2).jpeg" width="220" alt="Notification bell with unread badge"> |
+
+| Delete a duplicate report | Report deleted |
+| :---: | :---: |
+| <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.37%20(1).jpeg" width="220" alt="Staff delete confirmation dialog"> | <img src="screenshots/WhatsApp%20Image%202026-11-07%20at%2013.54.37.jpeg" width="220" alt="Report deleted message on the dashboard"> |
 
 ## Tech stack
 
