@@ -13,6 +13,7 @@ import 'services/notification_service.dart';
 import 'services/supabase_image_storage.dart';
 import 'screens/auth_wrapper.dart';
 import 'utils/constants.dart';
+import 'widgets/responsive_frame.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,7 @@ class CampusIncidentApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AuthWrapper(),
+      builder: (context, child) => ResponsiveFrame(child: child!),
     );
   }
 }

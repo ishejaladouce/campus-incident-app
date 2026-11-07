@@ -30,120 +30,210 @@ class _IncidentListScreenState extends State<IncidentListScreen> {
     final isStaff = context.watch<AuthProvider>().isStaff;
     final incidents = provider.filteredIncidents;
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
-            controller: _searchController,
-            onChanged: provider.setSearchQuery,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              hintText: 'Search title, description or location',
-              prefixIcon: const Icon(Icons.search),
-              isDense: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              suffixIcon: provider.searchQuery.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.clear),
-                      tooltip: 'Clear search',
-                      onPressed: () {
-                        _searchController.clear();
-                        provider.setSearchQuery('');
-                      },
-                    ),
+    // One scrolling page: the search and filters scroll away with the list,
+    // so the reports get the space they need on any screen size
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              onChanged: provider.setSearchQuery,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search title, description or location',
+                prefixIcon: const Icon(Icons.search),
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: provider.searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          _searchController.clear();
+                          provider.setSearchQuery('');
+                        },
+                      ),
+              ),
             ),
           ),
         ),
-        _ChipRow(children: [
-          _filterChip('All categories', provider.categoryFilter == null,
-              () => provider.setCategoryFilter(null)),
-          for (final category in IncidentCategory.all)
-            _filterChip(category, provider.categoryFilter == category,
-                () => provider.setCategoryFilter(category)),
-        ]),
-        _ChipRow(children: [
-          _filterChip('All statuses', provider.statusFilter == null,
-              () => provider.setStatusFilter(null)),
-          for (final status in IncidentStatus.all)
-            _filterChip(IncidentStatus.label(status), provider.statusFilter == status,
-                () => provider.setStatusFilter(status)),
-        ]),
-        if (isStaff) _StaffSummary(provider: provider),
-        Expanded(child: _buildList(provider, incidents)),
+        // Two filters side by side: they always fit the screen width
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _FilterDropdown(
+                    icon: Icons.category_outlined,
+                    allLabel: 'All categories',
+                    value: provider.categoryFilter,
+                    options: IncidentCategory.all,
+                    labelOf: (category) => category,
+                    onChanged: provider.setCategoryFilter,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _FilterDropdown(
+                    icon: Icons.flag_outlined,
+                    allLabel: 'All statuses',
+                    value: provider.statusFilter,
+                    options: IncidentStatus.all,
+                    labelOf: IncidentStatus.label,
+                    onChanged: provider.setStatusFilter,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isStaff) SliverToBoxAdapter(child: _StaffSummary(provider: provider)),
+        ..._buildResults(provider, incidents),
       ],
     );
   }
 
-  Widget _buildList(IncidentProvider provider, List<Incident> incidents) {
+  List<Widget> _buildResults(IncidentProvider provider, List<Incident> incidents) {
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ];
     }
     // Loading failed: explain why and offer to try again
     if (provider.loadError != null && incidents.isEmpty) {
-      return EmptyState(
-        icon: Icons.cloud_off,
-        title: 'Could not load reports',
-        message: provider.loadError!,
-        actionLabel: 'Try again',
-        onAction: provider.retry,
-      );
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: EmptyState(
+            icon: Icons.cloud_off,
+            title: 'Could not load reports',
+            message: provider.loadError!,
+            actionLabel: 'Try again',
+            onAction: provider.retry,
+          ),
+        ),
+      ];
     }
     if (incidents.isEmpty) {
-      return provider.hasActiveFilters
-          ? EmptyState(
-              icon: Icons.search_off,
-              title: 'No matching reports',
-              message: 'Try a different search or filter.',
-              actionLabel: 'Clear filters',
-              onAction: () {
-                _searchController.clear();
-                provider.clearFilters();
-              },
-            )
-          : const EmptyState(
-              icon: Icons.inbox_outlined,
-              title: 'No reports yet',
-              message: 'Reports submitted by students will appear here.',
-            );
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: provider.hasActiveFilters
+              ? EmptyState(
+                  icon: Icons.search_off,
+                  title: 'No matching reports',
+                  message: 'Try a different search or filter.',
+                  actionLabel: 'Clear filters',
+                  onAction: () {
+                    _searchController.clear();
+                    provider.clearFilters();
+                  },
+                )
+              : const EmptyState(
+                  icon: Icons.inbox_outlined,
+                  title: 'No reports yet',
+                  message: 'Reports submitted by students will appear here.',
+                ),
+        ),
+      ];
     }
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 88),
-      itemCount: incidents.length,
-      itemBuilder: (context, index) {
-        final incident = incidents[index];
-        return IncidentCard(
-          incident: incident,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => IncidentDetailScreen(incidentId: incident.id)),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _filterChip(String label, bool selected, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => onTap()),
-    );
+    return [
+      SliverPadding(
+        // Space at the bottom so the "Report issue" button never hides the last card
+        padding: const EdgeInsets.only(bottom: 88),
+        sliver: SliverList.builder(
+          itemCount: incidents.length,
+          itemBuilder: (context, index) {
+            final incident = incidents[index];
+            return IncidentCard(
+              incident: incident,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => IncidentDetailScreen(incidentId: incident.id)),
+              ),
+            );
+          },
+        ),
+      ),
+    ];
   }
 }
 
-class _ChipRow extends StatelessWidget {
-  final List<Widget> children;
-  const _ChipRow({required this.children});
+// A compact dropdown button for one filter (category or status)
+class _FilterDropdown extends StatelessWidget {
+  static const _allValue = '__all__';
+
+  final IconData icon;
+  final String allLabel;
+  final String? value;
+  final List<String> options;
+  final String Function(String) labelOf;
+  final ValueChanged<String?> onChanged;
+
+  const _FilterDropdown({
+    required this.icon,
+    required this.allLabel,
+    required this.value,
+    required this.options,
+    required this.labelOf,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: children,
+    final colors = Theme.of(context).colorScheme;
+    final isActive = value != null;
+
+    return PopupMenuButton<String>(
+      tooltip: allLabel,
+      onSelected: (selected) => onChanged(selected == _allValue ? null : selected),
+      itemBuilder: (context) => [
+        _item(_allValue, allLabel, !isActive),
+        ...options.map((option) => _item(option, labelOf(option), option == value)),
+      ],
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: isActive ? colors.secondaryContainer : null,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isActive ? colors.primary : colors.outline),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                isActive ? labelOf(value!) : allLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: isActive ? FontWeight.w600 : FontWeight.normal),
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _item(String itemValue, String label, bool selected) {
+    return PopupMenuItem<String>(
+      value: itemValue,
+      child: Row(
+        children: [
+          SizedBox(width: 24, child: selected ? const Icon(Icons.check, size: 18) : null),
+          const SizedBox(width: 8),
+          Text(label),
+        ],
       ),
     );
   }

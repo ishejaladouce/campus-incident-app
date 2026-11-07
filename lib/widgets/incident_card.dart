@@ -48,7 +48,15 @@ class IncidentCard extends StatelessWidget {
                           ),
                         ),
                         if (incident.imageUrl != null)
-                          Icon(Icons.photo_outlined, size: 16, color: theme.colorScheme.outline),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Icon(
+                              Icons.photo_outlined,
+                              size: 16,
+                              color: theme.colorScheme.outline,
+                              semanticLabel: 'Has a photo',
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -71,10 +79,16 @@ class IncidentCard extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          AppDateFormat.relative(incident.createdAt),
-                          style: theme.textTheme.bodySmall,
+                        const SizedBox(width: 8),
+                        // Takes the remaining space and shrinks with "…" if needed
+                        Expanded(
+                          child: Text(
+                            AppDateFormat.relative(incident.createdAt),
+                            textAlign: TextAlign.end,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
                         ),
                       ],
                     ),
